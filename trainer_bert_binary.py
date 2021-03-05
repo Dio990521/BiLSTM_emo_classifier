@@ -194,7 +194,7 @@ class TrainDataReader(TestDataReader):
     def __getitem__(self, idx):
         return torch.LongTensor(self.tokens[idx]), \
                torch.LongTensor(self.token_masks[idx]), \
-               torch.LongTensor(self.y[idx])
+               torch.LongTensor([self.y[idx]])
 
 
 def eval(model, best_model, loss_criterion, es, dev_loader, dev_data):
@@ -386,6 +386,7 @@ def train(X_train, y_train, X_dev, y_dev, X_test, y_test):
             del decoder_logit
         # break
 
+    torch.save(model, 'nlpcc_bert.pt')
     # pred_list_2 = np.concatenate(pred_list, axis=0)[:, 1]
     preds = np.concatenate(pred_list, axis=0)
     gold = np.concatenate(gold_list, axis=0)
@@ -425,24 +426,24 @@ def main():
     kf = KFold(n_splits=NUM_FOLD, random_state=0)
 
     gold_list = None
-    all_preds = []
+    # all_preds = []
     for i, (train_index, dev_index) in enumerate(kf.split(y_train_dev)):
         logger('STARTING Fold -----------', i + 1)
         X_train, X_dev = [X_train_dev[i] for i in train_index], [X_train_dev[i] for i in dev_index]
         y_train, y_dev = [y_train_dev[i] for i in train_index], [y_train_dev[i] for i in dev_index]
 
         gold_list, pred_list = train(X_train, y_train, X_dev, y_dev, X_test, y_test)
-        all_preds.append(pred_list)
+        # all_preds.append(pred_list)
         break
 
-    all_preds = np.stack(all_preds, axis=0)
+    # all_preds = np.stack(all_preds, axis=0)
 
-    shape = all_preds[0].shape
-    mj = np.zeros(shape)
-    for m in range(shape[0]):
-        for n in range(shape[1]):
-            mj[m, n] = find_majority(np.asarray(all_preds[:, m, n]).reshape((-1)))[0]
-    final_pred = mj
+    # shape = all_preds[0].shape
+    # mj = np.zeros(shape)
+    # for m in range(shape[0]):
+    #     for n in range(shape[1]):
+    #         mj[m, n] = find_majority(np.asarray(all_preds[:, m, n]).reshape((-1)))[0]
+    final_pred = pred_list
 
     logger('Final test by majority voting:')
     show_classification_report(gold_list, final_pred)
